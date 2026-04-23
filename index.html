@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard - Alianza de Oro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --gold: #D4AF37; --navy: #001F3F; }
+        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+        .navy-bg { background-color: var(--navy); }
+        .gold-text { color: var(--gold); }
+        .gold-btn { background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); }
+        .card { background: white; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .user-card.active { border: 3px solid var(--gold); background-color: #f0f7ff; }
+        .task-card.active { border: 2px solid var(--gold); background-color: #fffbeb; }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- Navbar -->
+    <nav class="navy-bg text-white p-6 shadow-2xl rounded-b-[40px] mb-8">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter italic text-white">ALIANZA DE ORO</h1>
+                <p class="text-[10px] uppercase tracking-widest text-blue-300">Hospital Financiero • Gamificación</p>
+            </div>
+            <div class="text-right">
+                <p id="dateDisplay" class="text-xs font-bold text-gold-text"></p>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto px-4 space-y-8">
+        
+        <!-- 1. SELECCIÓN DE JUGADOR -->
+        <section>
+            <h2 class="text-navy-bg font-black mb-4 flex items-center gap-2 px-2">
+                <i class="fas fa-id-badge gold-text"></i> ¿QUIÉN OPERA?
+            </h2>
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="setUser('Jean Carlos')" id="u-Jean Carlos" class="user-card card p-4 text-center transition-all">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">JC</div>
+                    <span class="text-[10px] font-black uppercase">Jean C.</span>
+                </button>
+                <button onclick="setUser('Rina')" id="u-Rina" class="user-card card p-4 text-center transition-all">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">RI</div>
+                    <span class="text-[10px] font-black uppercase">Rina</span>
+                </button>
+                <button onclick="setUser('Pablo')" id="u-Pablo" class="user-card card p-4 text-center transition-all">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">PA</div>
+                    <span class="text-[10px] font-black uppercase">Pablo</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. PANEL DE TAREAS -->
+        <section id="taskPanel" class="hidden animate-fade-in">
+            <h2 class="text-navy-bg font-black mb-4 flex items-center gap-2 px-2">
+                <i class="fas fa-tasks gold-text"></i> REGISTRAR TAREA
+            </h2>
+            <div id="tasksGrid" class="space-y-3">
+                <!-- Se inyecta por JS -->
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+                <div class="flex-1 flex flex-col">
+                    <label class="text-[10px] font-bold text-gray-400 mb-1 ml-2 uppercase">Cantidad</label>
+                    <input type="number" id="qty" value="1" min="1" class="w-full p-4 card border-none text-center text-2xl font-black text-navy-bg outline-none focus:ring-2 focus:ring-gold">
+                </div>
+                <button onclick="addPoints()" class="flex-[2] gold-btn text-white font-black rounded-2xl shadow-lg uppercase tracking-widest hover:scale-105 transition-transform">
+                    Sumar Puntos
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. RESULTADOS -->
+        <section class="card p-6">
+            <h2 class="text-navy-bg font-black mb-6 flex items-center gap-2">
+                <i class="fas fa-medal gold-text"></i> RANKING DEL MES
+            </h2>
+            <canvas id="rankingChart" height="250"></canvas>
+            
+            <div id="leaderboard" class="mt-8 space-y-4">
+                <!-- Se inyecta por JS -->
+            </div>
+        </section>
+
+        <!-- FOOTER / ADMIN -->
+        <div class="flex justify-between items-center px-4 opacity-30 mt-10">
+            <button onclick="exportData()" class="text-[10px] font-bold uppercase"><i class="fas fa-download"></i> Descargar Datos</button>
+            <button onclick="resetStats()" class="text-[10px] font-bold uppercase text-red-600"><i class="fas fa-trash"></i> Reiniciar Mes</button>
+        </div>
+
+    </main>
+
+    <!-- Notificación -->
+    <div id="notif" class="fixed bottom-5 left-1/2 -translate-x-1/2 navy-bg text-white px-8 py-4 rounded-full shadow-2xl font-bold hidden z-50 text-sm italic border-2 border-gold"></div>
+
+    <script>
+        // CONFIGURACIÓN DE PUNTOS SEGÚN INSTRUCCIONES DE PABLO
+        const CONFIG = {
+            "Jean Carlos": [
+                { id: 'aud', name: 'Auditoría Técnica', pts: 10, icon: 'fa-file-invoice' },
+                { id: 'sla', name: 'SLA < 15 Minutos', pts: 5, icon: 'fa-bolt' },
+                { id: 'rea', name: 'Reactivación Lead', pts: 2, icon: 'fa-user-check' }
+            ],
+            "Rina": [
+                { id: 'lla', name: 'Llamada Validada', pts: 5, icon: 'fa-phone-volume' },
+                { id: 'ven', name: 'Venta Auditoría ($25k)', pts: 20, icon: 'fa-dollar-sign' },
+                { id: 'des', name: 'Desembolso Crédito', pts: 100, icon: 'fa-trophy' }
+            ],
+            "Pablo": [
+                { id: 'est', name: 'Estrategia I+D', pts: 50, icon: 'fa-brain' },
+                { id: 'ads', name: 'Optimización Ads', pts: 30, icon: 'fa-chart-line' }
+            ]
+        };
+
+        let activeUser = null;
+        let activeTask = null;
+        let chart = null;
+
+        // Base de datos local
+        let db = JSON.parse(localStorage.getItem('alianza_scores_v1')) || {
+            "Jean Carlos": 0, "Rina": 0, "Pablo": 0, history: []
+        };
+
+        window.onload = () => {
+            const now = new Date();
+            document.getElementById('dateDisplay').innerText = now.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' });
+            renderChart();
+            renderLeaderboard();
+        };
+
+        function setUser(user) {
+            activeUser = user;
+            document.querySelectorAll('.user-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`u-${user}`).classList.add('active');
+            
+            const grid = document.getElementById('tasksGrid');
+            grid.innerHTML = '';
+            CONFIG[user].forEach(task => {
+                grid.innerHTML += `
+                    <button onclick="setTask('${task.id}')" id="t-${task.id}" class="task-card card w-full p-4 flex justify-between items-center text-left transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gold-text">
+                                <i class="fas ${task.icon} text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-navy-bg text-sm uppercase">${task.name}</p>
+                                <p class="text-[10px] font-bold text-gray-400">${task.pts} PUNTOS</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-200"></i>
+                    </button>
+                `;
+            });
+            document.getElementById('taskPanel').classList.remove('hidden');
+            window.scrollTo({ top: document.getElementById('taskPanel').offsetTop - 100, behavior: 'smooth' });
+        }
+
+        function setTask(taskId) {
+            activeTask = taskId;
+            document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`t-${taskId}`).classList.add('active');
+        }
+
+        function addPoints() {
+            if (!activeUser || !activeTask) return showNotif("⚠️ Selecciona quién eres y qué hiciste");
+            
+            const qtyInput = document.getElementById('qty');
+            const qty = parseInt(qtyInput.value);
+            if (isNaN(qty) || qty < 1) return showNotif("⚠️ Cantidad no válida");
+
+            const taskData = CONFIG[activeUser].find(t => t.id === activeTask);
+            const total = taskData.pts * qty;
+
+            db[activeUser] += total;
+            db.history.push({ 
+                user: activeUser, 
+                task: taskData.name, 
+                pts: total, 
+                qty: qty,
+                date: new Date().toISOString() 
+            });
+            
+            localStorage.setItem('alianza_scores_v1', JSON.stringify(db));
+            
+            showNotif(`🔥 ¡Excelente! +${total} puntos para ${activeUser}`);
+            renderChart();
+            renderLeaderboard();
+            qtyInput.value = 1;
+        }
+
+        function renderLeaderboard() {
+            const lb = document.getElementById('leaderboard');
+            lb.innerHTML = '';
+            const users = ["Jean Carlos", "Rina", "Pablo"].sort((a,b) => db[b] - db[a]);
+            
+            users.forEach((u, i) => {
+                const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉');
+                lb.innerHTML += `
+                    <div class="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${medal}</span>
+                            <span class="font-black text-navy-bg text-sm uppercase">${u}</span>
+                        </div>
+                        <span class="navy-bg text-gold-text px-4 py-1 rounded-full font-black text-xs">${db[u]} PTS</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('rankingChart').getContext('2d');
+            const data = [db['Jean Carlos'], db['Rina'], db['Pablo']];
+            
+            if (chart) {
+                chart.data.datasets[0].data = data;
+                chart.update();
+                return;
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jean Carlos', 'Rina', 'Pablo'],
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#001F3F', '#D4AF37', '#7F8C8D'],
+                        borderRadius: 12,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { display: false },
+                            ticks: { font: { weight: 'bold' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { weight: 'bold', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showNotif(msg) {
+            const n = document.getElementById('notif');
+            n.innerText = msg;
+            n.classList.remove('hidden');
+            setTimeout(() => n.classList.add('hidden'), 3000);
+        }
+
+        function resetStats() {
+            if (confirm("¿Estás seguro de que quieres borrar todos los puntos? Esta acción es definitiva.")) {
+                db = { "Jean Carlos": 0, "Rina": 0, "Pablo": 0, history: [] };
+                localStorage.setItem('alianza_scores_v1', JSON.stringify(db));
+                location.reload();
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "puntos_alianza_oro.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+</body>
+</html>
