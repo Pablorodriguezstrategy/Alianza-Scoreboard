@@ -3,118 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scoreboard - Alianza de Oro</title>
+    <title>Alianza de Oro - GAME ON</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --gold: #D4AF37; --navy: #001F3F; }
-        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
-        .navy-bg { background-color: var(--navy); }
-        .gold-text { color: var(--gold); }
-        .gold-btn { background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); }
-        .card { background: white; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .user-card.active { border: 3px solid var(--gold); background-color: #f0f7ff; }
-        .task-card.active { border: 2px solid var(--gold); background-color: #fffbeb; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --neon-gold: #FFD700;
+            --neon-blue: #00F2FF;
+            --dark-bg: #050505;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+        }
+
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+
+        .neon-border-gold { border: 2px solid var(--neon-gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        .neon-border-blue { border: 2px solid var(--neon-blue); box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); }
+
+        .user-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
+        .user-card:hover { transform: translateY(-10px) scale(1.05); }
+        .user-card.active { background: rgba(0, 242, 255, 0.2); border-color: var(--neon-blue); }
+
+        .task-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .task-card:active { transform: scale(0.95); }
+        .task-card.active { border-left-color: var(--neon-gold); background: rgba(255, 215, 0, 0.1); }
+
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.4; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .live-indicator { animation: pulse 2s infinite; }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-24">
 
-    <!-- Navbar -->
-    <nav class="navy-bg text-white p-6 shadow-2xl rounded-b-[40px] mb-8">
-        <div class="max-w-md mx-auto flex justify-between items-center">
+    <!-- 3D BACKGROUND -->
+    <div id="canvas-container"></div>
+
+    <!-- Header / Stats Globales -->
+    <header class="p-6 mb-4">
+        <div class="max-w-md mx-auto flex justify-between items-end">
             <div>
-                <h1 class="text-2xl font-black tracking-tighter italic text-white">ALIANZA DE ORO</h1>
-                <p class="text-[10px] uppercase tracking-widest text-blue-300">Hospital Financiero • Gamificación</p>
+                <h1 class="orbitron text-3xl font-black italic tracking-tighter text-white">ALIANZA <span class="text-[#FFD700]">GOLD</span></h1>
+                <p class="text-[10px] uppercase tracking-[0.3em] text-cyan-400 font-bold">Sistema de Operaciones 3.0</p>
             </div>
-            <div class="text-right">
-                <p id="dateDisplay" class="text-xs font-bold text-gold-text"></p>
+            <div class="text-right glass p-3 rounded-xl border border-cyan-900">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">Días para el Cierre</p>
+                <p id="daysLeft" class="orbitron text-xl font-bold text-white tracking-widest">00</p>
             </div>
         </div>
-    </nav>
+    </header>
 
     <main class="max-w-md mx-auto px-4 space-y-8">
-        
-        <!-- 1. SELECCIÓN DE JUGADOR -->
+
+        <!-- 1. SELECTOR DE JUGADOR (3D FEEL) -->
         <section>
-            <h2 class="text-navy-bg font-black mb-4 flex items-center gap-2 px-2">
-                <i class="fas fa-id-badge gold-text"></i> ¿QUIÉN OPERA?
-            </h2>
             <div class="grid grid-cols-3 gap-3">
-                <button onclick="setUser('Jean Carlos')" id="u-Jean Carlos" class="user-card card p-4 text-center transition-all">
-                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">JC</div>
-                    <span class="text-[10px] font-black uppercase">Jean C.</span>
-                </button>
-                <button onclick="setUser('Rina')" id="u-Rina" class="user-card card p-4 text-center transition-all">
-                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">RI</div>
-                    <span class="text-[10px] font-black uppercase">Rina</span>
-                </button>
-                <button onclick="setUser('Pablo')" id="u-Pablo" class="user-card card p-4 text-center transition-all">
-                    <div class="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-2 flex items-center justify-center font-bold text-navy-bg">PA</div>
-                    <span class="text-[10px] font-black uppercase">Pablo</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- 2. PANEL DE TAREAS -->
-        <section id="taskPanel" class="hidden animate-fade-in">
-            <h2 class="text-navy-bg font-black mb-4 flex items-center gap-2 px-2">
-                <i class="fas fa-tasks gold-text"></i> REGISTRAR TAREA
-            </h2>
-            <div id="tasksGrid" class="space-y-3">
-                <!-- Se inyecta por JS -->
-            </div>
-            
-            <div class="mt-6 flex gap-3">
-                <div class="flex-1 flex flex-col">
-                    <label class="text-[10px] font-bold text-gray-400 mb-1 ml-2 uppercase">Cantidad</label>
-                    <input type="number" id="qty" value="1" min="1" class="w-full p-4 card border-none text-center text-2xl font-black text-navy-bg outline-none focus:ring-2 focus:ring-gold">
+                <div onclick="setUser('Jean Carlos')" id="u-Jean Carlos" class="user-card glass p-4 text-center border-b-4 border-transparent">
+                    <div class="w-14 h-14 bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl mx-auto mb-2 flex items-center justify-center text-xl font-black border border-white/10">JC</div>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Technician</p>
                 </div>
-                <button onclick="addPoints()" class="flex-[2] gold-btn text-white font-black rounded-2xl shadow-lg uppercase tracking-widest hover:scale-105 transition-transform">
-                    Sumar Puntos
+                <div onclick="setUser('Rina')" id="u-Rina" class="user-card glass p-4 text-center border-b-4 border-transparent">
+                    <div class="w-14 h-14 bg-gradient-to-br from-cyan-700 to-blue-900 rounded-2xl mx-auto mb-2 flex items-center justify-center text-xl font-black border border-white/10">RI</div>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Sales Pro</p>
+                </div>
+                <div onclick="setUser('Pablo')" id="u-Pablo" class="user-card glass p-4 text-center border-b-4 border-transparent">
+                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-600 to-orange-900 rounded-2xl mx-auto mb-2 flex items-center justify-center text-xl font-black border border-white/10">PA</div>
+                    <p class="text-[10px] font-black uppercase tracking-widest">Strategist</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. REGISTRO DE MISIONES (DINÁMICO) -->
+        <section id="taskPanel" class="hidden">
+            <div class="flex justify-between items-center px-2 mb-4">
+                <h2 class="orbitron text-sm font-bold text-cyan-400"><i class="fas fa-crosshairs mr-2"></i>MISIONES DISPONIBLES</h2>
+                <span id="activeUserLabel" class="text-[10px] bg-white/10 px-3 py-1 rounded-full font-bold uppercase tracking-widest"></span>
+            </div>
+            
+            <div id="tasksList" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <!-- Inyectado por JS -->
+            </div>
+
+            <div class="mt-6 glass p-4 flex gap-4 items-center neon-border-blue">
+                <div class="flex-1">
+                    <p class="text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-tighter ml-1">Repeticiones</p>
+                    <input type="number" id="qty" value="1" min="1" class="bg-transparent w-full text-3xl orbitron font-black text-white outline-none">
+                </div>
+                <button onclick="addPoints()" class="flex-[2] bg-cyan-500 hover:bg-cyan-400 text-black orbitron font-black py-4 rounded-xl shadow-[0_0_20px_rgba(0,242,255,0.4)] uppercase transition-all">
+                    SUBIR SCORE
                 </button>
             </div>
         </section>
 
-        <!-- 3. RESULTADOS -->
-        <section class="card p-6">
-            <h2 class="text-navy-bg font-black mb-6 flex items-center gap-2">
-                <i class="fas fa-medal gold-text"></i> RANKING DEL MES
-            </h2>
-            <canvas id="rankingChart" height="250"></canvas>
+        <!-- 3. RANKING & CHART -->
+        <section class="glass p-6 border-t border-white/10">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="orbitron text-sm font-bold"><i class="fas fa-trophy text-yellow-400 mr-2"></i>LEADERBOARD</h2>
+                <div class="live-indicator flex items-center gap-1">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span class="text-[10px] font-bold text-green-500 uppercase">En Vivo</span>
+                </div>
+            </div>
             
-            <div id="leaderboard" class="mt-8 space-y-4">
-                <!-- Se inyecta por JS -->
+            <canvas id="rankingChart" height="200"></canvas>
+
+            <div id="leaderboardList" class="mt-8 space-y-4">
+                <!-- Leaderboard inyectado -->
             </div>
         </section>
 
-        <!-- FOOTER / ADMIN -->
-        <div class="flex justify-between items-center px-4 opacity-30 mt-10">
-            <button onclick="exportData()" class="text-[10px] font-bold uppercase"><i class="fas fa-download"></i> Descargar Datos</button>
-            <button onclick="resetStats()" class="text-[10px] font-bold uppercase text-red-600"><i class="fas fa-trash"></i> Reiniciar Mes</button>
-        </div>
+        <!-- 4. FOOTER & EXPORT -->
+        <footer class="flex justify-between items-center px-4 pt-4 border-t border-white/5">
+            <button onclick="downloadCSV()" class="text-[10px] font-bold text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
+                <i class="fas fa-file-csv mr-1"></i> Exportar Historial
+            </button>
+            <button onclick="resetStats()" class="text-[10px] font-bold text-red-900 uppercase tracking-widest">
+                <i class="fas fa-undo mr-1"></i> Reiniciar
+            </button>
+        </footer>
 
     </main>
 
-    <!-- Notificación -->
-    <div id="notif" class="fixed bottom-5 left-1/2 -translate-x-1/2 navy-bg text-white px-8 py-4 rounded-full shadow-2xl font-bold hidden z-50 text-sm italic border-2 border-gold"></div>
+    <!-- Notificación Gaming -->
+    <div id="notif" class="fixed top-10 left-1/2 -translate-x-1/2 glass border-2 border-cyan-500 px-8 py-4 rounded-2xl shadow-[0_0_30px_rgba(0,242,255,0.2)] hidden z-50 animate-bounce">
+        <p id="notifMsg" class="orbitron text-sm font-bold text-white text-center italic"></p>
+    </div>
 
     <script>
-        // CONFIGURACIÓN DE PUNTOS SEGÚN INSTRUCCIONES DE PABLO
+        // CONFIGURACIÓN DE PUNTOS EXACTOS ENVIADOS POR PABLO
         const CONFIG = {
-            "Jean Carlos": [
-                { id: 'aud', name: 'Auditoría Técnica', pts: 10, icon: 'fa-file-invoice' },
-                { id: 'sla', name: 'SLA < 15 Minutos', pts: 5, icon: 'fa-bolt' },
-                { id: 'rea', name: 'Reactivación Lead', pts: 2, icon: 'fa-user-check' }
-            ],
             "Rina": [
-                { id: 'lla', name: 'Llamada Validada', pts: 5, icon: 'fa-phone-volume' },
-                { id: 'ven', name: 'Venta Auditoría ($25k)', pts: 20, icon: 'fa-dollar-sign' },
-                { id: 'des', name: 'Desembolso Crédito', pts: 100, icon: 'fa-trophy' }
+                { id: 'r1', name: 'Llamar Cliente', pts: 2, icon: 'fa-phone-alt' },
+                { id: 'r2', name: 'Colilla', pts: 2, icon: 'fa-file-medical' },
+                { id: 'r3', name: 'Preinforme', pts: 1, icon: 'fa-file-signature' },
+                { id: 'r4', name: 'Vender Auditoría', pts: 9, icon: 'fa-shopping-cart' },
+                { id: 'r5', name: 'Cerrar Crédito', pts: 9, icon: 'fa-handshake' },
+                { id: 'r6', name: 'Venta Otros', pts: 7, icon: 'fa-plus-circle' },
+                { id: 'r7', name: 'Actualizar Base', pts: 8, icon: 'fa-database' }
+            ],
+            "Jean Carlos": [
+                { id: 'j1', name: 'Mensaje Potencial', pts: 1, icon: 'fa-paper-plane' },
+                { id: 'j2', name: 'Colilla', pts: 3, icon: 'fa-file-upload' },
+                { id: 'j3', name: 'Hacer Preinforme', pts: 1, icon: 'fa-paste' },
+                { id: 'j4', name: 'Crear Radiografía', pts: 4, icon: 'fa-x-ray' },
+                { id: 'j5', name: 'Montar Crédito', pts: 5, icon: 'fa-server' },
+                { id: 'j6', name: 'Monitoreo Crédito', pts: 7, icon: 'fa-search-dollar' },
+                { id: 'j7', name: 'Venta Otros', pts: 7, icon: 'fa-box-open' },
+                { id: 'j8', name: 'Actualizar Base', pts: 8, icon: 'fa-database' }
             ],
             "Pablo": [
-                { id: 'est', name: 'Estrategia I+D', pts: 50, icon: 'fa-brain' },
-                { id: 'ads', name: 'Optimización Ads', pts: 30, icon: 'fa-chart-line' }
+                { id: 'p1', name: 'Traer Cliente', pts: 9, icon: 'fa-user-plus' },
+                { id: 'p2', name: 'Mensaje Potencial', pts: 1, icon: 'fa-comment-dots' },
+                { id: 'p3', name: 'Venta Otros', pts: 7, icon: 'fa-coins' },
+                { id: 'p4', name: 'Hacer Pago', pts: 3, icon: 'fa-credit-card' },
+                { id: 'p5', name: 'Actualizar Base', pts: 8, icon: 'fa-database' }
             ]
         };
 
@@ -122,43 +184,80 @@
         let activeTask = null;
         let chart = null;
 
-        // Base de datos local
-        let db = JSON.parse(localStorage.getItem('alianza_scores_v1')) || {
+        // DB Persistent en LocalStorage
+        let db = JSON.parse(localStorage.getItem('alianza_pro_v3')) || {
             "Jean Carlos": 0, "Rina": 0, "Pablo": 0, history: []
         };
 
+        // 3D Engine Setup (Subtle Gold Coin Background)
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            // Moneda (Cilindro delgado)
+            const geometry = new THREE.CylinderGeometry(5, 5, 0.5, 32);
+            const material = new THREE.MeshPhongMaterial({ color: 0xFFD700, shininess: 100 });
+            const coin = new THREE.Mesh(geometry, material);
+            scene.add(coin);
+
+            const light = new THREE.PointLight(0x00F2FF, 1, 100);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+            camera.position.z = 15;
+            coin.rotation.x = 1.5;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                coin.rotation.z += 0.01;
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
         window.onload = () => {
-            const now = new Date();
-            document.getElementById('dateDisplay').innerText = now.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' });
+            init3D();
+            updateDays();
             renderChart();
             renderLeaderboard();
         };
+
+        function updateDays() {
+            const now = new Date();
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const remaining = lastDay - now.getDate();
+            document.getElementById('daysLeft').innerText = remaining.toString().padStart(2, '0');
+        }
 
         function setUser(user) {
             activeUser = user;
             document.querySelectorAll('.user-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`u-${user}`).classList.add('active');
             
-            const grid = document.getElementById('tasksGrid');
-            grid.innerHTML = '';
+            document.getElementById('activeUserLabel').innerText = user;
+            const list = document.getElementById('tasksList');
+            list.innerHTML = '';
+            
             CONFIG[user].forEach(task => {
-                grid.innerHTML += `
-                    <button onclick="setTask('${task.id}')" id="t-${task.id}" class="task-card card w-full p-4 flex justify-between items-center text-left transition-all">
+                list.innerHTML += `
+                    <div onclick="setTask('${task.id}')" id="t-${task.id}" class="task-card glass p-4 flex justify-between items-center">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gold-text">
-                                <i class="fas ${task.icon} text-lg"></i>
-                            </div>
+                            <i class="fas ${task.icon} text-cyan-400 text-lg w-6 text-center"></i>
                             <div>
-                                <p class="font-black text-navy-bg text-sm uppercase">${task.name}</p>
-                                <p class="text-[10px] font-bold text-gray-400">${task.pts} PUNTOS</p>
+                                <p class="text-xs font-bold uppercase tracking-widest text-white">${task.name}</p>
+                                <p class="text-[10px] text-yellow-500 font-black">+${task.pts} PTS</p>
                             </div>
                         </div>
-                        <i class="fas fa-chevron-right text-gray-200"></i>
-                    </button>
+                        <i class="fas fa-plus-circle text-white/20"></i>
+                    </div>
                 `;
             });
             document.getElementById('taskPanel').classList.remove('hidden');
-            window.scrollTo({ top: document.getElementById('taskPanel').offsetTop - 100, behavior: 'smooth' });
         }
 
         function setTask(taskId) {
@@ -168,12 +267,9 @@
         }
 
         function addPoints() {
-            if (!activeUser || !activeTask) return showNotif("⚠️ Selecciona quién eres y qué hiciste");
+            if (!activeUser || !activeTask) return showNotif("¡ERROR: SELECCIONA OBJETIVO!");
             
-            const qtyInput = document.getElementById('qty');
-            const qty = parseInt(qtyInput.value);
-            if (isNaN(qty) || qty < 1) return showNotif("⚠️ Cantidad no válida");
-
+            const qty = parseInt(document.getElementById('qty').value);
             const taskData = CONFIG[activeUser].find(t => t.id === activeTask);
             const total = taskData.pts * qty;
 
@@ -183,31 +279,31 @@
                 task: taskData.name, 
                 pts: total, 
                 qty: qty,
-                date: new Date().toISOString() 
+                timestamp: new Date().toLocaleString('es-CO')
             });
             
-            localStorage.setItem('alianza_scores_v1', JSON.stringify(db));
-            
-            showNotif(`🔥 ¡Excelente! +${total} puntos para ${activeUser}`);
+            localStorage.setItem('alianza_pro_v3', JSON.stringify(db));
+            showNotif(`¡LOGRO! +${total} PUNTOS`);
             renderChart();
             renderLeaderboard();
-            qtyInput.value = 1;
         }
 
         function renderLeaderboard() {
-            const lb = document.getElementById('leaderboard');
-            lb.innerHTML = '';
-            const users = ["Jean Carlos", "Rina", "Pablo"].sort((a,b) => db[b] - db[a]);
+            const container = document.getElementById('leaderboardList');
+            container.innerHTML = '';
+            const sorted = ["Jean Carlos", "Rina", "Pablo"].sort((a,b) => db[b] - db[a]);
             
-            users.forEach((u, i) => {
-                const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉');
-                lb.innerHTML += `
-                    <div class="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">${medal}</span>
-                            <span class="font-black text-navy-bg text-sm uppercase">${u}</span>
+            sorted.forEach((u, i) => {
+                const colors = i === 0 ? 'text-yellow-400' : 'text-gray-400';
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-4 glass border-l-2 ${i === 0 ? 'border-yellow-500' : 'border-transparent'}">
+                        <div class="flex items-center gap-4">
+                            <span class="orbitron text-lg font-black ${colors}">${i+1}</span>
+                            <span class="text-sm font-bold uppercase tracking-widest">${u}</span>
                         </div>
-                        <span class="navy-bg text-gold-text px-4 py-1 rounded-full font-black text-xs">${db[u]} PTS</span>
+                        <div class="text-right">
+                            <p class="orbitron text-sm font-black text-white">${db[u]} <span class="text-[8px] text-cyan-400">PTS</span></p>
+                        </div>
                     </div>
                 `;
             });
@@ -216,37 +312,24 @@
         function renderChart() {
             const ctx = document.getElementById('rankingChart').getContext('2d');
             const data = [db['Jean Carlos'], db['Rina'], db['Pablo']];
-            
-            if (chart) {
-                chart.data.datasets[0].data = data;
-                chart.update();
-                return;
-            }
+            if (chart) { chart.data.datasets[0].data = data; chart.update(); return; }
 
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Jean Carlos', 'Rina', 'Pablo'],
+                    labels: ['JEAN C.', 'RINA', 'PABLO'],
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#001F3F', '#D4AF37', '#7F8C8D'],
-                        borderRadius: 12,
-                        borderWidth: 0
+                        backgroundColor: ['#00F2FF', '#FFD700', '#555'],
+                        borderRadius: 15,
+                        barThickness: 30
                     }]
                 },
                 options: {
-                    responsive: true,
                     plugins: { legend: { display: false } },
                     scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            grid: { display: false },
-                            ticks: { font: { weight: 'bold' } }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { weight: 'bold', size: 10 } }
-                        }
+                        y: { display: false }, 
+                        x: { grid: { display: false }, ticks: { color: '#888', font: { family: 'Orbitron', size: 10 } } }
                     }
                 }
             });
@@ -254,27 +337,32 @@
 
         function showNotif(msg) {
             const n = document.getElementById('notif');
-            n.innerText = msg;
+            document.getElementById('notifMsg').innerText = msg;
             n.classList.remove('hidden');
-            setTimeout(() => n.classList.add('hidden'), 3000);
+            setTimeout(() => n.classList.add('hidden'), 2500);
+        }
+
+        function downloadCSV() {
+            if (db.history.length === 0) return showNotif("¡HISTORIAL VACÍO!");
+            
+            let csv = "Fecha,Usuario,Tarea,Cantidad,Puntos\n";
+            db.history.forEach(h => {
+                csv += `${h.timestamp},${h.user},${h.task},${h.qty},${h.pts}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `alianza_score_${new Date().toLocaleDateString()}.csv`);
+            a.click();
         }
 
         function resetStats() {
-            if (confirm("¿Estás seguro de que quieres borrar todos los puntos? Esta acción es definitiva.")) {
-                db = { "Jean Carlos": 0, "Rina": 0, "Pablo": 0, history: [] };
-                localStorage.setItem('alianza_scores_v1', JSON.stringify(db));
+            if (confirm("¿BORRAR TODO EL REGISTRO DEL MES?")) {
+                localStorage.removeItem('alianza_pro_v3');
                 location.reload();
             }
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "puntos_alianza_oro.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
         }
     </script>
 </body>
